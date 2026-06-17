@@ -1,0 +1,14 @@
+{
+  "name": "marketing-agent",
+  "version": "1.0.0",
+  "description": "REFO-V3 Marketing Refactoring Agent Web UI",
+  "type": "extension",
+  "entrypoint": "src/index.js",
+  "browser_action": {
+    "default_popup": "public/index.html"
+  },
+  "permissions": [
+    "pi.callTool",
+    "pi.chat"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "marketing-agent-root",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b mcp-servers/search-server",
+    "start": "node server.js",
+    "dev": "npm run build && npm start"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "^0.79.1",
+    "@modelcontextprotocol/sdk": "latest",
+    "@sinclair/typebox": "^0.34.49",
+    "better-sqlite3": "^12.10.1",
+    "dotenv": "^16.0.0",
+    "duck-duck-scrape": "^2.2.3",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "typescript": "^5.0.0"
+  }
+}

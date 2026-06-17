@@ -1,0 +1,5 @@
+node_modules/
+mcp-servers/search-server/node_modules/
+mcp-servers/search-server/dist/
+.env
+history.db

@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>REFO — 콘텐츠 리팩토링</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #07070d;
+      --surface:    #0e0e18;
+      --surface2:   #14141f;
+      --surface3:   #1a1a28;
+      --border:     #1e1e30;
+      --border2:    #2a2a40;
+      --accent:     #6c63ff;
+      --accent2:    #8b85ff;
+      --accent-glow:rgba(108,99,255,0.15);
+      --green:      #00e5a0;
+      --text:       #eeeef8;
+      --text-muted: #7070a0;
+      --text-dim:   #36364a;
+      --naver:      #03C75A;
+      --tistory:    #FF5F37;
+      --radius:     16px;
+      --radius-sm:  10px;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text);
+      font-family: 'Pretendard', -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased; overflow: hidden; }
+
+    /* ── HERO (초기 화면) ── */
+    .hero {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 0; z-index: 10;
+      transition: opacity 0.5s, transform 0.5s;
+      background: var(--bg);
+    }
+    .hero.hidden { opacity: 0; pointer-events: none; transform: translateY(-30px); }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 20px; padding: 5px 14px 5px 10px;
+      font-size: 12px; color: var(--text-muted); margin-bottom: 28px;
+    }
+    .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+    .hero-title {
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 800; letter-spacing: -2px; line-height: 1.1;
+      text-align: center; margin-bottom: 14px;
+    }
+    .hero-title span {
+      background: linear-gradient(135deg, #6c63ff, #a78bfa, #60a5fa);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero-sub {
+      font-size: 16px; color: var(--text-muted);
+      text-align: center; margin-bottom: 44px; line-height: 1.6;
+    }
+
+    .hero-input-wrap {
+      width: 100%; max-width: 660px; position: relative;
+    }
+    .hero-input {
+      width: 100%; padding: 18px 60px 18px 22px;
+      background: var(--surface); border: 1.5px solid var(--border2);
+      border-radius: 18px; color: var(--text); font-size: 16px;
+      font-family: inherit; outline: none;
+      box-shadow: 0 0 0 0 var(--accent-glow);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .hero-input::placeholder { color: var(--text-dim); }
+    .hero-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-glow), 0 20px 60px rgba(108,99,255,0.1);
+    }
+    .hero-send {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      width: 40px; height: 40px; border-radius: 12px;
+      background: var(--accent); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 17px; transition: all 0.15s;
+    }
+    .hero-send:hover { background: var(--accent2); transform: translateY(-50%) scale(1.05); }
+
+    .hero-chips {
+      display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap;
+      justify-content: center;
+    }
+    .hero-chip {
+      padding: 6px 14px; border-radius: 20px;
+      background: var(--surface2); border: 1px solid var(--border);
+      font-size: 12.5px; color: var(--text-muted); cursor: pointer;
+      transition: all 0.15s;
+    }
+    .hero-chip:hover { border-color: var(--accent); color: var(--accent2); background: var(--accent-glow); }
+
+    /* ── MAIN APP (검색 후) ── */
+    .app {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.4s;
+    }
+    .app.visible { opacity: 1; pointer-events: all; }
+
+    /* topbar */
+    .topbar {
+      height: 52px; display: flex; align-items: center;
+      justify-content: space-between; padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(7,7,13,0.85); backdrop-filter: blur(12px);
+      flex-shrink: 0; z-index: 5;
+    }
+    .logo { display: flex; align-items: center; gap: 8px;
+      font-weight: 800; font-size: 15px; letter-spacing: -0.5px; cursor: pointer; }
+    .logo-box { width: 26px; height: 26px; background: var(--accent);
+      border-radius: 8px; display: flex; align-items: center;
+      justify-content: center; font-size: 13px; color: #fff; font-weight: 800; }
+    .logo-v { color: var(--text-dim); font-weight: 300; font-size: 12px; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .pill { font-size: 10px; font-family: 'JetBrains Mono', monospace;
+      color: var(--accent); background: var(--accent-glow);
+      border: 1px solid rgba(108,99,255,0.3);
+      padding: 3px 9px; border-radius: 20px; }
+
+    /* body split */
+    .body { display: flex; flex: 1; overflow: hidden; }
+
+    /* sidebar */
+    .sidebar {
+      width: 220px; flex-shrink: 0;
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; padding: 14px 8px; gap: 1px;
+      overflow-y: auto;
+    }
+    .sb-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--text-dim);
+      padding: 0 8px; margin: 12px 0 5px; }
+    .sb-item { display: flex; align-items: center; gap: 9px;
+      padding: 8px 10px; border-radius: var(--radius-sm);
+      font-size: 13px; color: var(--text-muted); cursor: pointer;
+      transition: all 0.12s; border: 1px solid transparent; }
+    .sb-item:hover { background: var(--surface2); color: var(--text); }
+    .sb-item.active { background: var(--accent-glow); color: var(--accent2);
+      border-color: rgba(108,99,255,0.2); }
+    .sb-icon { width: 20px; height: 20px; border-radius: 5px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 800; }
+    .sb-icon.naver { background: var(--naver); color: #fff; }
+    .sb-icon.tistory { background: var(--tistory); color: #fff; }
+    .sb-icon.instagram { background: linear-gradient(135deg,#f09433,#c13584); color: #fff; }
+    .sb-icon.x-tw { background: #111; border: 1px solid #333; color: #fff; }
+
+    /* main content */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    .scroll-area { flex: 1; overflow-y: auto; padding: 20px 24px 100px; }
+    .scroll-area::-webkit-scrollbar { width: 4px; }
+    .scroll-area::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* bottom input bar */
+    .bottom-bar {
+      border-top: 1px solid var(--border);
+      background: rgba(7,7,13,0.9); backdrop-filter: blur(12px);
+      padding: 12px 20px; flex-shrink: 0;
+    }
+    .bar-inner { display: flex; gap: 8px; align-items: center; max-width: 900px; margin: 0 auto; }
+    .bar-input {
+      flex: 1; background: var(--surface); border: 1.5px solid var(--border2);
+      border-radius: 14px; padding: 11px 16px; color: var(--text);
+      font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.15s;
+    }
+    .bar-input:focus { border-color: var(--accent); }
+    .bar-input::placeholder { color: var(--text-dim); }
+
+    .btn { display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 16px; border-radius: var(--radius-sm); border: none;
+      font-size: 13px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all 0.14s; white-space: nowrap; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent2); }
+    .btn-ghost { background: var(--surface2); color: var(--text-muted);
+      border: 1px solid var(--border2); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--border2); }
+    .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    /* channel chips */
+    .channel-row { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+    .ch-label { font-size: 11px; color: var(--text-dim); }
+    .chip { display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 20px; font-size: 12px;
+      font-weight: 500; cursor: pointer; user-select: none;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-muted); transition: all 0.14s; }
+    .chip:hover { border-color: var(--border2); }
+    .chip-ico { width: 14px; height: 14px; border-radius: 3px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 8px; font-weight: 800; }
+    .chip-ico.naver { background: var(--naver); color: #fff; }
+    .chip-ico.tistory { background: var(--tistory); color: #fff; }
+    .chip-ico.instagram { background: linear-gradient(135deg,#f09433,#c13584); color: #fff; }
+    .chip-ico.x-tw { background: #111; border:1px solid #444; color: #fff; font-size:7px; }
+    .chip.active-naver { background: rgba(3,199,90,0.1); border-color: var(--naver); color: var(--naver); }
+    .chip.active-tistory { background: rgba(255,95,55,0.1); border-color: var(--tistory); color: var(--tistory); }
+    .chip.active-instagram { background: rgba(193,53,132,0.1); border-color: #c13584; color: #e060b0; }
+    .chip.active-x { background: rgba(200,200,200,0.06); border-color: #555; color: #ccc; }
+
+    /* section */
+    .section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px; }
+
+    /* cards */
+    .cards { display: flex; flex-direction: column; gap: 8px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px;
+      display: flex; gap: 12px; cursor: pointer;
+      transition: all 0.15s; position: relative;
+    }
+    .card:hover { border-color: var(--border2); background: var(--surface2); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    .card.selected { border-color: var(--accent); background: var(--accent-glow); }
+    .card-num { font-size: 10px; font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim); padding-top: 2px; width: 18px; flex-shrink: 0; }
+    .card-body { flex: 1; min-width: 0; }
+    .card-title { font-size: 13.5px; font-weight: 600; color: var(--text);
+      margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6;
+      display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
+      -webkit-box-orient: vertical; overflow: hidden; }
+    .card-url { font-size: 10.5px; font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim); margin-top: 6px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-right { display: flex; flex-direction: column; align-items: flex-end;
+      gap: 6px; flex-shrink: 0; }
+    .card-check { color: var(--accent); font-size: 16px; opacity: 0; transition: opacity 0.15s; }
+    .card.selected .card-check { opacity: 1; }
+    .btn-preview { font-size: 10.5px; padding: 4px 10px; border-radius: 6px;
+      border: 1px solid var(--border2); background: var(--surface3);
+      color: var(--text-dim); cursor: pointer; transition: all 0.14s; font-family: inherit; }
+    .btn-preview:hover { color: var(--accent2); border-color: var(--accent); }
+
+    /* refactor action row */
+    .action-row { display: flex; align-items: center; gap: 10px;
+      margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+    .selected-info { flex: 1; font-size: 12px; color: var(--text-dim); }
+    .selected-info strong { color: var(--accent2); }
+
+    /* result */
+    .result-box { background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; margin-top: 20px; }
+    .result-tabs { display: flex; background: var(--surface2);
+      border-bottom: 1px solid var(--border); padding: 0 4px; }
+    .rtab { padding: 11px 16px; font-size: 12.5px; font-weight: 500;
+      cursor: pointer; color: var(--text-muted);
+      border-bottom: 2px solid transparent; transition: all 0.14s;
+      display: flex; align-items: center; gap: 6px; }
+    .rtab:hover { color: var(--text); }
+    .rtab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+    .rtab-ico { width: 14px; height: 14px; border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 7.5px; font-weight: 800; flex-shrink: 0; }
+    .rtab-ico.naver { background: var(--naver); color: #fff; }
+    .rtab-ico.tistory { background: var(--tistory); color: #fff; }
+    .rtab-ico.instagram { background: linear-gradient(135deg,#f09433,#c13584); color: #fff; }
+    .rtab-ico.x-tw { background: #111; border:1px solid #444; color: #fff; }
+    .result-content { padding: 22px; font-size: 13.5px; line-height: 1.85;
+      color: var(--text-muted);
+      min-height: 180px; max-height: 480px; overflow-y: auto; }
+    .result-content h1 { font-size: 18px; font-weight: 700; color: var(--text); margin: 0 0 14px; }
+    .result-content h2 { font-size: 15px; font-weight: 700; color: var(--text); margin: 18px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .result-content h3 { font-size: 13.5px; font-weight: 600; color: var(--accent2); margin: 14px 0 6px; }
+    .result-content h4 { font-size: 13px; font-weight: 600; color: var(--text-muted); margin: 10px 0 4px; }
+    .result-content p { margin: 0 0 10px; }
+    .result-content ul { padding-left: 18px; margin: 6px 0 10px; }
+    .result-content li { margin-bottom: 4px; }
+    .result-content strong { color: var(--text); font-weight: 600; }
+    .result-content em { color: var(--accent2); font-style: normal; }
+    .result-footer { display: flex; gap: 8px; padding: 10px 16px;
+      border-top: 1px solid var(--border); background: var(--surface2); }
+
+    /* thinking */
+    .thinking { display: none; align-items: center; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 16px;
+      font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px; }
+    .thinking.show { display: flex; }
+    .dots span { display: inline-block; width: 5px; height: 5px;
+      border-radius: 50%; background: var(--accent); margin: 0 2px;
+      animation: blink 1.2s infinite; }
+    .dots span:nth-child(2){animation-delay:.2s}
+    .dots span:nth-child(3){animation-delay:.4s}
+    @keyframes blink{0%,80%,100%{opacity:.15;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+
+    /* toast */
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(8px);
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 12px; padding: 11px 20px; font-size: 13px;
+      opacity: 0; transition: all 0.22s; z-index: 999; white-space: nowrap; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* modal */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px); z-index: 200;
+      display: none; align-items: center; justify-content: center; padding: 20px; }
+    .overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 20px; width: 100%; max-width: 580px; max-height: 78vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.7); }
+    .modal-head { display: flex; gap: 12px; padding: 18px 20px;
+      border-bottom: 1px solid var(--border); align-items: flex-start; }
+    .modal-head-text { flex: 1; min-width: 0; }
+    .modal-ttl { font-size: 14px; font-weight: 600; margin-bottom: 5px; line-height: 1.4; }
+    .modal-url { font-size: 10.5px; font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .modal-x { width: 28px; height: 28px; border-radius: 8px;
+      background: var(--surface2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-muted); font-size: 15px;
+      flex-shrink: 0; transition: all 0.14s; }
+    .modal-x:hover { color: var(--text); }
+    .modal-body { flex: 1; overflow-y: auto; padding: 20px;
+      font-size: 13.5px; line-height: 1.8; color: var(--text-muted); }
+    .modal-foot { padding: 14px 20px; border-top: 1px solid var(--border);
+      display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-sel { background: var(--accent); color: #fff; padding: 9px 20px;
+      border-radius: 11px; border: none; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: all 0.14s; }
+    .btn-sel:hover { background: var(--accent2); }
+    .btn-link { background: var(--surface2); color: var(--text-muted);
+      border: 1px solid var(--border2); padding: 9px 14px; border-radius: 11px;
+      font-size: 13px; cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 5px; transition: all 0.14s; }
+    .btn-link:hover { color: var(--text); }
+
+    /* empty */
+    .empty { display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 10px; color: var(--text-dim);
+      padding: 60px 20px; text-align: center; }
+    .empty-icon { font-size: 32px; opacity: 0.25; }
+    .empty h3 { font-size: 14px; color: var(--text-muted); font-weight: 500; }
+    .empty p { font-size: 12.5px; line-height: 1.8; max-width: 260px; }
+  </style>
+</head>
+<body>
+
+<!-- ── HERO ── -->
+<div class="hero" id="hero">
+  <div class="hero-badge">
+    <span class="dot"></span> Pi Framework · MCP · Naver Search API
+  </div>
+  <h1 class="hero-title">오래된 콘텐츠를<br/><span>수익형으로 변환</span>하세요</h1>
+  <p class="hero-sub">키워드 하나로 네이버·티스토리·인스타·X 콘텐츠를 즉시 생성합니다</p>
+  <div class="hero-input-wrap">
+    <input class="hero-input" id="hero-input" placeholder="예: 다이어트 식단, 주식 투자법, 최신 AI 트렌드…" />
+    <button class="hero-send" id="hero-send">↑</button>
+  </div>
+  <div class="hero-chips">
+    <span class="hero-chip" onclick="setHeroKeyword('치킨 맛집 추천')">🍗 치킨 맛집</span>
+    <span class="hero-chip" onclick="setHeroKeyword('다이어트 식단')">🥗 다이어트 식단</span>
+    <span class="hero-chip" onclick="setHeroKeyword('주식 투자 초보')">📈 주식 투자</span>
+    <span class="hero-chip" onclick="setHeroKeyword('AI 최신 트렌드')">🤖 AI 트렌드</span>
+    <span class="hero-chip" onclick="setHeroKeyword('여행 준비물')">✈️ 여행 준비물</span>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="logo" onclick="goHome()">
+      <div class="logo-box">R</div>
+      REFO <span class="logo-v">V3</span>
+    </div>
+    <div class="topbar-right">
+      <span class="pill">Pi Framework</span>
+      <div style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);animation:pulse 2s infinite"></div>
+    </div>
+  </header>
+
+  <div class="body">
+    <aside class="sidebar">
+      <div class="sb-label">작업</div>
+      <div class="sb-item active">
+        <span style="font-size:16px">✦</span> 콘텐츠 리팩토링
+      </div>
+      <div class="sb-item" id="sidebar-history" onclick="openHistoryPanel()">
+        <span style="font-size:16px">🕐</span> 히스토리
+      </div>
+
+      <div class="sb-label" style="margin-top:auto">출력 채널</div>
+      <div class="sb-item" onclick="toggleChannel('naver')">
+        <div class="sb-icon naver">N</div> 네이버 블로그
+      </div>
+      <div class="sb-item" onclick="toggleChannel('tistory')">
+        <div class="sb-icon tistory">T</div> 티스토리
+      </div>
+      <div class="sb-item" onclick="toggleChannel('instagram')">
+        <div class="sb-icon instagram">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+        </div> 인스타그램
+      </div>
+      <div class="sb-item" onclick="toggleChannel('x')">
+        <div class="sb-icon x-tw">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </div> X (Twitter)
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="scroll-area" id="scroll-area">
+        <div class="empty" id="empty-state">
+          <div class="empty-icon">✦</div>
+          <h3>검색 결과가 여기에 표시됩니다</h3>
+          <p>아래 검색창에 키워드를 입력하면<br/>실시간 소스 5개를 수집합니다</p>
+        </div>
+
+        <div id="thinking" class="thinking">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <span id="thinking-text">검색 중...</span>
+        </div>
+
+        <div id="source-section" style="display:none">
+          <div class="section-label">수집된 소스</div>
+          <div class="cards" id="cards-grid"></div>
+          <div class="action-row">
+            <span class="selected-info" id="selected-info">카드를 클릭하거나 미리보기로 확인 후 선택하세요</span>
+            <button class="btn btn-ghost btn-sm" id="next-btn" disabled onclick="nextPage()">🔄 다음 5개</button>
+            <button class="btn btn-primary" id="refactor-btn" disabled onclick="doRefactor()">✦ 리팩토링</button>
+          </div>
+        </div>
+
+        <div id="result-section" style="display:none">
+          <div class="result-box">
+            <div class="result-tabs" id="result-tabs"></div>
+            <div class="result-content" id="result-content"></div>
+            <div class="result-footer">
+              <button class="btn btn-ghost btn-sm" onclick="copyResult()">📋 복사</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-bar">
+        <div class="bar-inner">
+          <input class="bar-input" id="bar-input" placeholder="다른 키워드로 검색…" />
+          <button class="btn btn-primary" id="search-btn" onclick="doSearch(true)">검색</button>
+        </div>
+        <div class="bar-inner" style="margin-top:8px">
+          <div class="channel-row">
+            <span class="ch-label">변환 채널</span>
+            <span class="chip active-naver" id="chip-naver" onclick="toggleChannel('naver')">
+              <span class="chip-ico naver">N</span> 네이버
+            </span>
+            <span class="chip" id="chip-tistory" onclick="toggleChannel('tistory')">
+              <span class="chip-ico tistory">T</span> 티스토리
+            </span>
+            <span class="chip" id="chip-instagram" onclick="toggleChannel('instagram')">
+              <span class="chip-ico instagram">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+              </span> 인스타
+            </span>
+            <span class="chip" id="chip-x" onclick="toggleChannel('x')">
+              <span class="chip-ico x-tw">
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              </span> Twitter
+            </span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="closeModalBg(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-head-text">
+        <div class="modal-ttl" id="modal-title"></div>
+        <div class="modal-url" id="modal-url"></div>
+      </div>
+      <button class="modal-x" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot">
+      <a class="btn-link" id="modal-href" href="#" target="_blank">↗ 원문 열기</a>
+      <button class="btn-sel" id="modal-sel">이 소스 선택</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ── 히스토리 패널 ── -->
+<div class="history-overlay" id="history-panel" onclick="closeHistoryPanel()">
+  <div class="history-panel" onclick="event.stopPropagation()">
+    <div class="history-head">
+      <span class="history-title">🕐 히스토리</span>
+      <button class="history-close" onclick="closeHistoryPanel()">✕</button>
+    </div>
+    <div class="history-list" id="history-list">
+      <div class="history-empty">로딩 중...</div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .history-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px); z-index: 300;
+    display: none; justify-content: flex-end;
+  }
+  .history-overlay.open { display: flex; }
+  .history-panel {
+    width: 340px; height: 100%;
+    background: var(--surface); border-left: 1px solid var(--border2);
+    display: flex; flex-direction: column;
+    box-shadow: -20px 0 60px rgba(0,0,0,0.5);
+    animation: slideIn 0.22s ease;
+  }
+  @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  .history-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px; border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .history-title { font-size: 14px; font-weight: 700; color: var(--text); }
+  .history-close {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text-muted); cursor: pointer; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.14s;
+  }
+  .history-close:hover { color: var(--text); }
+  .history-list { flex: 1; overflow-y: auto; padding: 10px; }
+  .history-list::-webkit-scrollbar { width: 4px; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .history-empty { padding: 30px; text-align: center; color: var(--text-dim); font-size: 13px; }
+  .history-item {
+    position: relative; padding: 12px 14px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 11px; margin-bottom: 7px; cursor: pointer;
+    transition: all 0.14s;
+  }
+  .history-item:hover { border-color: var(--accent); background: var(--accent-glow); }
+  .history-item-title {
+    font-size: 12.5px; font-weight: 500; color: var(--text);
+    margin-bottom: 5px; padding-right: 20px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .history-item-meta { display: flex; gap: 8px; align-items: center; }
+  .history-channels {
+    font-size: 10px; font-weight: 700; color: var(--accent2);
+    background: var(--accent-glow); border: 1px solid rgba(108,99,255,0.2);
+    padding: 1px 7px; border-radius: 10px;
+  }
+  .history-date { font-size: 10.5px; color: var(--text-dim); }
+  .history-del {
+    position: absolute; top: 10px; right: 10px;
+    width: 20px; height: 20px; border-radius: 5px;
+    background: transparent; border: none; color: var(--text-dim);
+    cursor: pointer; font-size: 11px; display: flex;
+    align-items: center; justify-content: center; transition: all 0.14s;
+  }
+  .history-del:hover { color: #ff5f5f; background: rgba(255,95,95,0.1); }
+</style>
+
+<script src="client.js"></script>
+</body>
+</html>

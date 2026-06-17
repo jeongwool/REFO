@@ -1,0 +1,25 @@
+{
+  "name": "marketing-refactor-agent",
+  "version": "1.0.0",
+  "description": "오래된 블로그를 SEO 콘텐츠로 변환하는 마케팅 에이전트",
+  "mcpServers": {
+    "search_server": {
+      "command": "node",
+      "args": [
+        "mcp-servers/search-server/dist/index.js"
+      ]
+    }
+  },
+  "extensions": {
+    "marketing-agent": {
+      "path": "extensions/marketing-agent",
+      "enabled": true
+    }
+  },
+  "skills": [
+    {
+      "name": "content-refactor",
+      "path": "skills/content-refactor.skill"
+    }
+  ]
+}

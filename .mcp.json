@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "search-server": {
+      "command": "node",
+      "args": [
+        "mcp-servers/search-server/dist/index.js"
+      ]
+    },
+    "content-store": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "./refactored"
+      ]
+    }
+  }
+}
