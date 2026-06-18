@@ -81,6 +81,8 @@ async function doSearch(resetPage = true, queryOverride = null) {
   emptyState.style.display = 'none';
   sourceSection.style.display = 'none';
   resultSection.style.display = 'none';
+  // 개선④: 스켈레톤 로딩 표시
+  document.getElementById('skeleton-section').style.display = 'block';
 
   try {
     const res = await fetch('/api/search', {
@@ -92,6 +94,7 @@ async function doSearch(resetPage = true, queryOverride = null) {
     if (!res.ok) throw new Error(data.error || '검색 실패');
 
     state.searchResults = data.results || [];
+    document.getElementById('skeleton-section').style.display = 'none';
     if (!state.searchResults.length) {
       showToast('검색 결과가 없습니다. 다른 키워드를 시도해보세요.');
       emptyState.style.display = 'flex';
@@ -102,6 +105,7 @@ async function doSearch(resetPage = true, queryOverride = null) {
     nextBtn.disabled = false;
     scrollArea.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (err) {
+    document.getElementById('skeleton-section').style.display = 'none';
     showToast('검색 오류: ' + err.message);
     emptyState.style.display = 'flex';
   } finally {
@@ -127,7 +131,7 @@ function renderCards() {
     card.className = 'card';
     card.dataset.index = i;
     card.innerHTML = `
-      <span class="card-num">0${i + 1}</span>
+      <div class="card-num">0${i + 1}</div>
       <div class="card-body">
         <div class="card-title">${escHtml(item.title || '제목 없음')}</div>
         <div class="card-desc">${escHtml(item.description || '설명 없음')}</div>
